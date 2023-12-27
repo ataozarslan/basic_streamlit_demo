@@ -1,14 +1,15 @@
 import numpy as np
 import pandas as pd
 import streamlit as st
+from sklearn.preprocessing import StandardScaler
 
 # Sayfa Ayarları
 st.set_page_config(
     page_title="House Classifier",
-    page_icon="https://miro.medium.com/max/2400/1*rGi8_JUoGX0L3W6nivmIAg@2x.png",
+    page_icon="https://miro.medium.com/v2/resize:fit:2400/1*rGi8_JUoGX0L3W6nivmIAg@2x.png",
     menu_items={
         "Get help": "mailto:ata.ozarslan@istdsa.com",
-        "About": "For More Information\n" + "https://github.com/Zekeriyabesiroglu/DSAG22"
+        "About": "For More Information\n" + "https://github.com/ataozarslan/DSNov22"
     }
 )
 
@@ -19,7 +20,7 @@ st.title("House Classification Project")
 st.markdown("A research company wants to decide whether this house is in **:red[New York City]** or **:red[San Francisco]** by looking at the various features of the houses they have.")
 
 # Resim Ekleme
-st.image("http://thecooperreview.com/wp-content/uploads/2015/04/NYCSF4.png")
+st.image("https://i.insider.com/5808fc6cc52402ce248b5aa2?width=1000&format=jpeg&auto=webp")
 
 st.markdown("After the latest developments in the artificial intelligence industry, they expect us to develop a **machine learning model** in line with their needs and help them with their research.")
 st.markdown("In addition, when they have information about a new house, they want us to come up with a product that we can predict where this house will be based on this information.")
@@ -40,14 +41,14 @@ st.markdown("- **price_per_sqft**: Price per square feet of the house")
 st.markdown("- **elevation**: Elevation(ft) value where the house is located")
 
 # Pandasla veri setini okuyalım
-df = pd.read_csv("ny_sf_apt.csv")
+df = pd.read_pickle("train_df.pkl")
 
 # Küçük bir düzenleme :)
 df.beds = df.beds.astype(int)
 df.bath = df.bath.astype(int)
 
 # Tablo Ekleme
-st.table(df.sample(5, random_state=42))
+st.table(df.sample(5))
 
 #---------------------------------------------------------------------------------------------------------------------
 
@@ -70,12 +71,23 @@ from joblib import load
 logreg_model = load('logreg_model.pkl')
 
 input_df = pd.DataFrame({
-    'Elevation': [elevation],
-    'Price_per_sqft': [price_per_sqft]
+    'elevation': [elevation],
+    'price_per_sqft': [price_per_sqft]
 })
 
-pred = logreg_model.predict(input_df.values)
-pred_probability = np.round(logreg_model.predict_proba(input_df.values), 2)
+# Tahminlerimizin toplantı dataframe oluşturma
+train_df = df[['elevation','price_per_sqft']]
+result_df = pd.concat([train_df, input_df])
+
+# Verilerimizi ölçeklendirmeyi unutmuyoruz!
+std_scale = StandardScaler()
+scaled_result_df = std_scale.fit_transform(result_df)
+
+# Kullanıcı tarafından girilen girdiye ulaşma
+test_df = scaled_result_df[-1].reshape(1,2) 
+
+pred = logreg_model.predict(test_df)
+pred_probability = np.round(logreg_model.predict_proba(test_df), 2)
 
 #---------------------------------------------------------------------------------------------------------------------
 
@@ -99,8 +111,8 @@ if st.sidebar.button("Submit"):
     'Surname': [surname],
     'Date': [today],
     'Time': [time],
-    'Price': [price],
     'Elevation': [elevation],
+    'Price': [price],
     'Sqft': [sqft],
     'Prediction': [pred],
     'NY Probability': [pred_probability[:,:1]],
