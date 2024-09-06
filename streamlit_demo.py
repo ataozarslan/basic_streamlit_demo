@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 import streamlit as st
-from sklearn.preprocessing import StandardScaler
 
 # Sayfa Ayarları
 st.set_page_config(
@@ -20,7 +19,7 @@ st.title("House Classification Project")
 st.markdown("A research company wants to decide whether this house is in **:red[New York City]** or **:red[San Francisco]** by looking at the various features of the houses they have.")
 
 # Resim Ekleme
-st.image("https://i.insider.com/5808fc6cc52402ce248b5aa2?width=1000&format=jpeg&auto=webp")
+st.image("ny-sf.png")
 
 st.markdown("After the latest developments in the artificial intelligence industry, they expect us to develop a **machine learning model** in line with their needs and help them with their research.")
 st.markdown("In addition, when they have information about a new house, they want us to come up with a product that we can predict where this house will be based on this information.")
@@ -41,14 +40,14 @@ st.markdown("- **price_per_sqft**: Price per square feet of the house")
 st.markdown("- **elevation**: Elevation(ft) value where the house is located")
 
 # Pandasla veri setini okuyalım
-df = pd.read_pickle("train_df.pkl")
+df = pd.read_csv("ny_sf_apt.csv")
 
 # Küçük bir düzenleme :)
 df.beds = df.beds.astype(int)
 df.bath = df.bath.astype(int)
 
 # Tablo Ekleme
-st.table(df.sample(5))
+st.dataframe(df.sample(5))
 
 #---------------------------------------------------------------------------------------------------------------------
 
@@ -58,7 +57,7 @@ st.sidebar.markdown("**Choose** the features below to see the result!")
 # Sidebarda Kullanıcıdan Girdileri Alma
 name = st.sidebar.text_input("Name", help="Please capitalize the first letter of your name!")
 surname = st.sidebar.text_input("Surname", help="Please capitalize the first letter of your surname!")
-price = st.sidebar.number_input("Price of House ($)", min_value=1, format="%d")
+price = st.sidebar.number_input("Price of House ($)", min_value=1)
 sqft = st.sidebar.number_input("Square Feet of House", min_value=1)
 price_per_sqft = price/sqft
 elevation = st.sidebar.slider("Elevation of House (ft)", min_value=0, max_value=250)
@@ -75,19 +74,13 @@ input_df = pd.DataFrame({
     'price_per_sqft': [price_per_sqft]
 })
 
-# Tahminlerimizin toplantı dataframe oluşturma
-train_df = df[['elevation','price_per_sqft']]
-result_df = pd.concat([train_df, input_df])
-
 # Verilerimizi ölçeklendirmeyi unutmuyoruz!
-std_scale = StandardScaler()
-scaled_result_df = std_scale.fit_transform(result_df)
+std_scale = load('scaler.pkl')
+scaled_input_df = std_scale.transform(input_df)
 
-# Kullanıcı tarafından girilen girdiye ulaşma
-test_df = scaled_result_df[-1].reshape(1,2) 
 
-pred = logreg_model.predict(test_df)
-pred_probability = np.round(logreg_model.predict_proba(test_df), 2)
+pred = logreg_model.predict(scaled_input_df)
+pred_probability = np.round(logreg_model.predict_proba(scaled_input_df), 2)
 
 #---------------------------------------------------------------------------------------------------------------------
 
@@ -115,8 +108,8 @@ if st.sidebar.button("Submit"):
     'Price': [price],
     'Sqft': [sqft],
     'Prediction': [pred],
-    'NY Probability': [pred_probability[:,:1]],
-    'SF Probability': [pred_probability[:,1:]]
+    'NY Probability': [pred_probability[:,0]],
+    'SF Probability': [pred_probability[:,1]]
     })
 
     results_df["Prediction"] = results_df["Prediction"].apply(lambda x: str(x).replace("0","NY"))
